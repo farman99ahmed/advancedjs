@@ -3,6 +3,7 @@
 ## Usage
 
 ```bash
+git clone https://github.com/farman99ahmed/advancedjs.git
 npm i -g cross-fetch
 cd Assignment_1
 
