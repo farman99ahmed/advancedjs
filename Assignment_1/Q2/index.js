@@ -26,11 +26,12 @@ const errors = {
     404: "Not found",
 }
 
+const error_codes = Object.keys(errors).map(code => Number(code));
 
 const makeGetCall = async (uri) => {
     try {
         const res = await fetch(uri);
-        if ([400, 401, 403, 404].includes(res.status)) {
+        if (error_codes.includes(res.status)) {
             return res.status;
         } else if ([200, 201, 202].includes(res.status)) {
             return await res.json();
@@ -44,9 +45,9 @@ const makeGetCall = async (uri) => {
 
 const getNameProperty = async (uri) => {
     const response = await makeGetCall(uri);
-    if (response.hasOwnProperty('name') && response != 403) {
+    if (response.hasOwnProperty('name') && !error_codes.includes(response)) {
         return response['name']
-    } else if ([400, 401, 403, 404].includes(response)) {
+    } else if (error_codes.includes(response)) {
         return errors[response];
     } else {
         return null
@@ -55,9 +56,9 @@ const getNameProperty = async (uri) => {
 
 const getLength = async (uri) => {
     const response = await makeGetCall(uri);
-    if (response != [] && response != 403) {
+    if (response != [] && !error_codes.includes(response)) {
         return response.length
-    } else if ([400, 401, 403, 404].includes(response)) {
+    } else if (error_codes.includes(response)) {
         return errors[response];
     } else {
         return null
