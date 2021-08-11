@@ -5,62 +5,93 @@ var queryString = "hello123"; //Type something here
 let repos = [];
 
 const resultTemplate = {
-  name: "",
-  full_name: "",
-  private: "",
-  owners: {
-    login: "",
     name: "",
-    followersCount: "",
-    followingCount: "",
-  },
-  licenseName: "",
-  score: "",
-  numberOfBranch: ""
+    full_name: "",
+    private: "",
+    owner: {
+        login: "",
+        name: "",
+        followersCount: "",
+        followingCount: "",
+    },
+    licenseName: "",
+    score: "",
+    numberOfBranch: ""
 }
 
+const errors = {
+    400: "Bad request",
+    401: "Unauthorized",
+    403: "API access forbidden",
+    404: "Not found",
+}
+
+
 const makeGetCall = async (uri) => {
-  try {
-    const res = await fetch(uri);
-    if (res.status != 200) {
-      throw new Error(`Error Code: ${res.status}. Try again later.`)
-    } else {
-      return await res.json();
+    try {
+        const res = await fetch(uri);
+        if ([400, 401, 403, 404].includes(res.status)) {
+            return res.status;
+        } else if ([200, 201, 202].includes(res.status)) {
+            return await res.json();
+        } else {
+            throw new Error(`Error Code: ${res.status}. Try again later.`)
+        }
+    } catch (error) {
+        console.log(error);
     }
-  } catch (error) {
-    console.log(error.message);
-  }
+}
+
+const getNameProperty = async (uri) => {
+    const response = await makeGetCall(uri);
+    if (response.hasOwnProperty('name') && response != 403) {
+        return response['name']
+    } else if ([400, 401, 403, 404].includes(response)) {
+        return errors[response];
+    } else {
+        return null
+    }
+}
+
+const getLength = async (uri) => {
+    const response = await makeGetCall(uri);
+    if (response != [] && response != 403) {
+        return response.length
+    } else if ([400, 401, 403, 404].includes(response)) {
+        return errors[response];
+    } else {
+        return null
+    }
 }
 
 const getSingleRepo = async (result) => {
-  var repo = {
-    ...resultTemplate
-  };
-  repo.name = result.name;
-  repo.full_name = result['full_name'];
-  repo.private = result['private'];
-  repo.owners.login = result['owner']['login'];
-  repo.licenseName = result['license'];
-  repo.score = result['score'];
-  // The following lines are commented because of API usage limitations
-  // repo.owner.name = await makeGetCall(result['owner']['url'])['name'] || null;
-  // repo.owner.followersCount = await makeGetCall(result['owner']['followers_url']).length;
-  // repo.owner.followingCount = await makeGetCall(result['owner']['following_url']).length;
-  // repo.numberOfBranch = await makeGetCall(result['branches_url'].replace('{/branches}', '')).length;
-  return repo;
+    var repo = {
+        ...resultTemplate
+    };
+    repo.name = result.name;
+    repo.full_name = result['full_name'];
+    repo.private = result['private'];
+    repo.owner.login = result['owner']['login'];
+    repo.licenseName = result['license'];
+    repo.score = result['score'];
+    repo.owner.name = await getNameProperty(result['owner']['url']);
+    repo.owner.followersCount = await getLength(result['owner']['followers_url']);
+    repo.owner.followingCount = await getLength(result['owner']['following_url']);
+    repo.numberOfBranch = await getLength(result['branches_url']);
+    return repo;
 }
 
 const getResult = async () => {
-  try {
-    results = await makeGetCall("https://api.github.com/search/repositories?q=" + queryString);
-    for (result of results['items']) {
-      var repo = await getSingleRepo(result);
-      repos.push(repo);
+    try {
+        results = await makeGetCall("https://api.github.com/search/repositories?q=" + queryString);
+        for (result of results['items']) {
+            var repo = await getSingleRepo(result);
+            repos.push(repo);
+        }
+        console.log(repos);
+    } catch (err) {
+        console.error(err.message);
     }
-    console.log(repos);
-  } catch (err) {
-    console.error(err.message);
-  }
 };
 
 getResult();
